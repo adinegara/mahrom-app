@@ -59,12 +59,6 @@ export function calculateTreeLayout(nodes: PersonNode[], edges: RelationEdge[]):
       return ax - bx
     })
 
-    // Position nodes within each group, centered around parent
-    let globalOffset = 0
-    const totalNodes = layerNodes.length
-    const totalWidth = (totalNodes - 1) * NODE_SPACING
-    let currentX = -totalWidth / 2
-
     for (const [parentId, children] of parentGroups) {
       const parentX = parentId === 'user' ? 0 : (positioned.get(parentId)?.x ?? 0)
       const groupWidth = (children.length - 1) * NODE_SPACING

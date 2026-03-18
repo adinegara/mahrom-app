@@ -41,13 +41,6 @@ export function NodeAddPopup({ nodeId, direction, x, y, onClose }: NodeAddPopupP
     return node?.relationType ?? null
   }, [nodeId, nodes])
 
-  // Get the parent node name for context display
-  const parentName = useMemo(() => {
-    if (nodeId === 'user') return null
-    const node = nodes.find(n => n.id === nodeId)
-    return node?.name ?? null
-  }, [nodeId, nodes])
-
   const resolvedOptions = useMemo(() => {
     // Filter base relations by direction
     let bases = BASE_RELATIONS.filter(b => b.direction === direction)
