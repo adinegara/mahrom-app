@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-doodle: "Caveat", cursive;
+  --font-sans: "Inter", sans-serif;
+  --color-canvas: #faf9f6;
+  --color-ink: #2d2d2d;
+  --color-ink-light: #6b6b6b;
+  --color-male: #4a90d9;
+  --color-male-light: #e8f0fe;
+  --color-female: #e87fa0;
+  --color-female-light: #fde8ef;
+  --color-mahram-yes: #4caf50;
+  --color-mahram-temp: #ff9800;
+  --color-mahram-no: #f44336;
+  --color-doodle-bg: #ffffff;
+  --color-doodle-border: #d4d4d4;
+  --animate-orbit: orbit calc(var(--duration) * 1s) linear infinite;
+
+  @keyframes orbit {
+    0% {
+      transform: rotate(calc(var(--angle) * 1deg))
+        translateY(calc(var(--radius) * 1px)) rotate(calc(var(--angle) * -1deg));
+    }
+    100% {
+      transform: rotate(calc(var(--angle) * 1deg + 360deg))
+        translateY(calc(var(--radius) * 1px))
+        rotate(calc((var(--angle) * -1deg) - 360deg));
+    }
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Doodle style borders */
+.doodle-border {
+  border: 2px solid var(--color-ink);
+  border-radius: 12px;
+  box-shadow: 3px 3px 0px var(--color-ink);
+}
+
+.doodle-border-male {
+  border: 2.5px solid var(--color-male);
+  border-radius: 12px;
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--color-male) 50%, black);
+}
+
+.doodle-border-female {
+  border: 2.5px solid var(--color-female);
+  border-radius: 12px;
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--color-female) 50%, black);
+}
+
+/* Hand-drawn line effect using SVG filter */
+.hand-drawn {
+  filter: url(#hand-drawn-filter);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-doodle-border);
+  border-radius: 3px;
+}
