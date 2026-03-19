@@ -25,6 +25,9 @@ export function Canvas() {
   const nodeDragRef = useRef<{ id: string; startX: number; startY: number; nodeStartX: number; nodeStartY: number } | null>(null)
   const updateNodePosition = useAppStore(s => s.updateNodePosition)
 
+  // Mobile active node state (for showing buttons on tap)
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null)
+
   // Popup state for contextual add buttons
   const [addPopup, setAddPopup] = useState<{ nodeId: string; direction: 'up' | 'down' | 'side'; x: number; y: number } | null>(null)
 
@@ -74,6 +77,68 @@ export function Canvas() {
     e.stopPropagation()
     nodeDragRef.current = { id: nodeId, startX: e.clientX, startY: e.clientY, nodeStartX: nodeX, nodeStartY: nodeY }
     setNodeDragId(nodeId)
+    setActiveNodeId(null)
+  }, [])
+
+  // Node touch logic
+  const nodeTouchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleNodeTouchStart = useCallback((e: React.TouchEvent, nodeId: string, nodeX: number, nodeY: number) => {
+    if (e.touches.length !== 1) return
+
+    if (nodeTouchTimer.current) clearTimeout(nodeTouchTimer.current)
+
+    // Start a 400ms timer for long press
+    nodeTouchTimer.current = setTimeout(() => {
+      nodeDragRef.current = {
+        id: nodeId,
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY,
+        nodeStartX: nodeX,
+        nodeStartY: nodeY
+      }
+      setNodeDragId(nodeId)
+      setActiveNodeId(null)
+      nodeTouchTimer.current = null
+    }, 400)
+    
+    // We do NOT stop propagation here so canvas panning can still start if user swipes immediately
+  }, [])
+
+  const handleNodeTouchMove = useCallback((e: React.TouchEvent) => {
+    // If user moves finger before timer pops, it's a pan, cancel long-press
+    if (nodeTouchTimer.current) {
+      clearTimeout(nodeTouchTimer.current)
+      nodeTouchTimer.current = null
+    }
+
+    if (nodeDragRef.current) {
+      e.stopPropagation() // Prevent canvas from panning while we drag node
+      const touch = e.touches[0]
+      const dx = (touch.clientX - nodeDragRef.current.startX) / zoom
+      const dy = (touch.clientY - nodeDragRef.current.startY) / zoom
+      updateNodePosition(
+        nodeDragRef.current.id,
+        nodeDragRef.current.nodeStartX + dx,
+        nodeDragRef.current.nodeStartY + dy
+      )
+    }
+  }, [updateNodePosition, zoom])
+
+  const handleNodeTouchEnd = useCallback((e: React.TouchEvent, nodeId: string) => {
+    // If timer is still active, it was a short tap!
+    if (nodeTouchTimer.current) {
+      clearTimeout(nodeTouchTimer.current)
+      nodeTouchTimer.current = null
+      setActiveNodeId(prev => prev === nodeId ? null : nodeId)
+      e.stopPropagation() // Prevent canvas tap logic
+    }
+
+    if (nodeDragRef.current) {
+      nodeDragRef.current = null
+      setNodeDragId(null)
+      e.stopPropagation() 
+    }
   }, [])
 
   // Zoom with wheel
@@ -104,6 +169,7 @@ export function Canvas() {
 
   const handleTouchEnd = useCallback(() => {
     touchStart.current = null
+    setActiveNodeId(null) // tapping background clears active node
   }, [])
 
   // Prevent default wheel scroll
@@ -321,8 +387,11 @@ export function Canvas() {
 
       {/* Center user node */}
       <div
-        className="absolute z-10 group cursor-grab active:cursor-grabbing"
+        className="absolute z-10 group cursor-grab active:cursor-grabbing relation-node"
         onMouseDown={(e) => handleNodeMouseDown(e, 'user', userX, userY)}
+        onTouchStart={(e) => handleNodeTouchStart(e, 'user', userX, userY)}
+        onTouchMove={handleNodeTouchMove}
+        onTouchEnd={(e) => handleNodeTouchEnd(e, 'user')}
         style={{
           left: centerX + canvasOffset.x + userX * zoom,
           top: centerY + canvasOffset.y + userY * zoom,
@@ -353,28 +422,31 @@ export function Canvas() {
         {/* Directional add buttons on user node */}
         <button
           onClick={(e) => handleNodeAddClick('user', 'up', e)}
-          className="absolute -top-3 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full
+          className={`absolute -top-3 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full
             bg-[var(--color-ink)] text-white text-sm flex items-center justify-center
-            opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer
-            z-10 border-2 border-white shadow-sm hover:scale-110"
+            transition-opacity cursor-pointer
+            z-10 border-2 border-white shadow-sm hover:scale-110 
+            ${activeNodeId === 'user' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
         >
           +
         </button>
         <button
           onClick={(e) => handleNodeAddClick('user', 'down', e)}
-          className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full
+          className={`absolute -bottom-3 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full
             bg-[var(--color-ink)] text-white text-sm flex items-center justify-center
-            opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer
-            z-10 border-2 border-white shadow-sm hover:scale-110"
+            transition-opacity cursor-pointer
+            z-10 border-2 border-white shadow-sm hover:scale-110
+            ${activeNodeId === 'user' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
         >
           +
         </button>
         <button
           onClick={(e) => handleNodeAddClick('user', 'side', e)}
-          className="absolute top-1/2 -right-3 -translate-y-1/2 w-7 h-7 rounded-full
+          className={`absolute top-1/2 -right-3 -translate-y-1/2 w-7 h-7 rounded-full
             bg-[var(--color-ink)] text-white text-sm flex items-center justify-center
-            opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer
-            z-10 border-2 border-white shadow-sm hover:scale-110"
+            transition-opacity cursor-pointer
+            z-10 border-2 border-white shadow-sm hover:scale-110
+            ${activeNodeId === 'user' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
         >
           +
         </button>
@@ -396,8 +468,16 @@ export function Canvas() {
               transformOrigin: 'center',
             }}
             onMouseDown={(e) => handleNodeMouseDown(e, node.id, node.x, node.y)}
+            onTouchStart={(e) => handleNodeTouchStart(e, node.id, node.x, node.y)}
+            onTouchMove={handleNodeTouchMove}
+            onTouchEnd={(e) => handleNodeTouchEnd(e, node.id)}
           >
-            <RelationNode node={node} mahramResult={edge.mahramResult} onAddClick={handleNodeAddClick} />
+            <RelationNode 
+              node={node} 
+              mahramResult={edge.mahramResult} 
+              onAddClick={handleNodeAddClick}
+              isActive={activeNodeId === node.id}
+            />
           </div>
         )
       })}

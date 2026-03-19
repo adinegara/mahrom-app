@@ -5,6 +5,7 @@ interface RelationNodeProps {
   node: PersonNode
   mahramResult: MahramResult
   onAddClick?: (nodeId: string, direction: 'up' | 'down' | 'side', e: React.MouseEvent) => void
+  isActive?: boolean
 }
 
 function getMahramColor(result: MahramResult) {
@@ -23,7 +24,7 @@ function getMahramColor(result: MahramResult) {
   }
 }
 
-export function RelationNode({ node, mahramResult, onAddClick }: RelationNodeProps) {
+export function RelationNode({ node, mahramResult, onAddClick, isActive }: RelationNodeProps) {
   const removeNode = useAppStore(s => s.removeNode)
   const userGender = useAppStore(s => s.userGender)
   const colors = getMahramColor(mahramResult)
@@ -43,9 +44,10 @@ export function RelationNode({ node, mahramResult, onAddClick }: RelationNodePro
       {/* Delete button */}
       <button
         onClick={(e) => { e.stopPropagation(); removeNode(node.id) }}
-        className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs
-          flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity
-          cursor-pointer z-10 border-2 border-white shadow-sm"
+        className={`absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs
+          flex items-center justify-center transition-opacity
+          cursor-pointer z-10 border-2 border-white shadow-sm
+          ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
       >
         x
       </button>
@@ -122,30 +124,33 @@ export function RelationNode({ node, mahramResult, onAddClick }: RelationNodePro
           {/* Top — parents/up */}
           <button
             onClick={(e) => { e.stopPropagation(); onAddClick(node.id, 'up', e) }}
-            className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full
+            className={`absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full
               bg-[var(--color-ink)] text-white text-xs flex items-center justify-center
-              opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer
-              z-10 border-2 border-white shadow-sm hover:scale-110"
+              transition-opacity cursor-pointer
+              z-10 border-2 border-white shadow-sm hover:scale-110
+              ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
           >
             +
           </button>
           {/* Bottom — children/down */}
           <button
             onClick={(e) => { e.stopPropagation(); onAddClick(node.id, 'down', e) }}
-            className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full
+            className={`absolute -bottom-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full
               bg-[var(--color-ink)] text-white text-xs flex items-center justify-center
-              opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer
-              z-10 border-2 border-white shadow-sm hover:scale-110"
+              transition-opacity cursor-pointer
+              z-10 border-2 border-white shadow-sm hover:scale-110
+              ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
           >
             +
           </button>
           {/* Right — siblings/side */}
           <button
             onClick={(e) => { e.stopPropagation(); onAddClick(node.id, 'side', e) }}
-            className="absolute top-1/2 -right-3 -translate-y-1/2 w-6 h-6 rounded-full
+            className={`absolute top-1/2 -right-3 -translate-y-1/2 w-6 h-6 rounded-full
               bg-[var(--color-ink)] text-white text-xs flex items-center justify-center
-              opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer
-              z-10 border-2 border-white shadow-sm hover:scale-110"
+              transition-opacity cursor-pointer
+              z-10 border-2 border-white shadow-sm hover:scale-110
+              ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
           >
             +
           </button>
