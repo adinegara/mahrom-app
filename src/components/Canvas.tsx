@@ -81,60 +81,54 @@ export function Canvas() {
   }, [])
 
   // Node touch logic
-  const nodeTouchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const nodeTouchMoveCount = useRef(0)
 
   const handleNodeTouchStart = useCallback((e: React.TouchEvent, nodeId: string, nodeX: number, nodeY: number) => {
     if (e.touches.length !== 1) return
 
-    if (nodeTouchTimer.current) clearTimeout(nodeTouchTimer.current)
-
-    // Start a 400ms timer for long press
-    nodeTouchTimer.current = setTimeout(() => {
-      nodeDragRef.current = {
-        id: nodeId,
-        startX: e.touches[0].clientX,
-        startY: e.touches[0].clientY,
-        nodeStartX: nodeX,
-        nodeStartY: nodeY
-      }
-      setNodeDragId(nodeId)
-      setActiveNodeId(null)
-      nodeTouchTimer.current = null
-    }, 400)
-    
-    // We do NOT stop propagation here so canvas panning can still start if user swipes immediately
+    nodeTouchMoveCount.current = 0
+    nodeDragRef.current = {
+      id: nodeId,
+      startX: e.touches[0].clientX,
+      startY: e.touches[0].clientY,
+      nodeStartX: nodeX,
+      nodeStartY: nodeY
+    }
+    setNodeDragId(nodeId)
+    e.stopPropagation() // Prevent canvas from starting pan
   }, [])
 
   const handleNodeTouchMove = useCallback((e: React.TouchEvent) => {
-    // If user moves finger before timer pops, it's a pan, cancel long-press
-    if (nodeTouchTimer.current) {
-      clearTimeout(nodeTouchTimer.current)
-      nodeTouchTimer.current = null
-    }
-
     if (nodeDragRef.current) {
       e.stopPropagation() // Prevent canvas from panning while we drag node
       const touch = e.touches[0]
       const dx = (touch.clientX - nodeDragRef.current.startX) / zoom
       const dy = (touch.clientY - nodeDragRef.current.startY) / zoom
-      updateNodePosition(
-        nodeDragRef.current.id,
-        nodeDragRef.current.nodeStartX + dx,
-        nodeDragRef.current.nodeStartY + dy
-      )
+      
+      // Tolerate small movements to still count as a tap
+      if (Math.abs(touch.clientX - nodeDragRef.current.startX) > 5 || Math.abs(touch.clientY - nodeDragRef.current.startY) > 5) {
+        nodeTouchMoveCount.current += 1
+        
+        // Hide active + buttons as soon as we start actually dragging
+        if (nodeTouchMoveCount.current === 1) {
+          setActiveNodeId(null)
+        }
+
+        updateNodePosition(
+          nodeDragRef.current.id,
+          nodeDragRef.current.nodeStartX + dx,
+          nodeDragRef.current.nodeStartY + dy
+        )
+      }
     }
   }, [updateNodePosition, zoom])
 
   const handleNodeTouchEnd = useCallback((e: React.TouchEvent, nodeId: string) => {
-    // If timer is still active, it was a short tap!
-    if (nodeTouchTimer.current) {
-      clearTimeout(nodeTouchTimer.current)
-      nodeTouchTimer.current = null
-      setActiveNodeId(prev => prev === nodeId ? null : nodeId)
-      e.stopPropagation() // Prevent canvas tap logic
-    }
-
     if (nodeDragRef.current) {
+      if (nodeTouchMoveCount.current === 0) {
+        // It's a short tap
+        setActiveNodeId(prev => prev === nodeId ? null : nodeId)
+      }
       nodeDragRef.current = null
       setNodeDragId(null)
       e.stopPropagation() 
