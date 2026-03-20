@@ -487,39 +487,6 @@ export function FamilyChartCanvas() {
         })
     })
 
-    // Helper: zoom/center on a ghost card's position in the SVG
-    function zoomToGhostCard(e: MouseEvent) {
-      const svg = el.querySelector<SVGSVGElement>('.main_svg')
-      if (!svg) return
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const zoomEl: any = (svg as any).__zoomObj ? svg : svg.parentNode
-      const zoom = zoomEl?.__zoomObj
-      if (!zoom) return
-
-      // Find the card_cont element from the click target
-      const cardCont = (e.target as HTMLElement).closest('.card_cont')
-      if (!cardCont) return
-      const rect = cardCont.getBoundingClientRect()
-      const svgRect = svg.getBoundingClientRect()
-
-      // Calculate the center of the card relative to the SVG
-      const cardCenterX = rect.left + rect.width / 2 - svgRect.left
-      const cardCenterY = rect.top + rect.height / 2 - svgRect.top
-
-      const currentTransform = d3.zoomTransform(zoomEl)
-      // Translate so the card center moves to ~30% from top of viewport
-      const targetX = svgRect.width / 2
-      const targetY = svgRect.height * 0.3
-      const dx = targetX - cardCenterX
-      const dy = targetY - cardCenterY
-
-      const newTransform = d3.zoomIdentity
-        .translate(currentTransform.x + dx, currentTransform.y + dy)
-        .scale(currentTransform.k)
-
-      d3.select(zoomEl).transition().duration(500).call(zoom.transform, newTransform)
-    }
-
     // Mode-aware card click handler
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     f3Card.setOnCardClick((e: MouseEvent, d: any) => {
