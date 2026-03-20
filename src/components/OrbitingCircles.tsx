@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useId } from 'react'
 import { cn } from '@/lib/utils'
 
 interface OrbitingCirclesProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -10,6 +10,7 @@ interface OrbitingCirclesProps extends React.HTMLAttributes<HTMLDivElement> {
   path?: boolean
   iconSize?: number
   speed?: number
+  beamColor?: string
 }
 
 export function OrbitingCircles({
@@ -21,9 +22,13 @@ export function OrbitingCircles({
   path = true,
   iconSize = 30,
   speed = 1,
+  beamColor = '#000000',
   ...props
 }: OrbitingCirclesProps) {
   const calculatedDuration = duration / speed
+  const id = useId()
+  const gradientId = `beam-gradient-${id}`
+
   return (
     <>
       {path && (
@@ -32,12 +37,39 @@ export function OrbitingCircles({
           version="1.1"
           className="pointer-events-none absolute inset-0 size-full"
         >
+          <defs>
+            <linearGradient id={gradientId} gradientUnits="userSpaceOnUse">
+              <animateTransform
+                attributeName="gradientTransform"
+                type="rotate"
+                from={reverse ? '360 0 0' : '0 0 0'}
+                to={reverse ? '0 0 0' : '360 0 0'}
+                dur={`${calculatedDuration}s`}
+                repeatCount="indefinite"
+              />
+              <stop offset="0%" stopColor={beamColor} stopOpacity="0" />
+              <stop offset="20%" stopColor={beamColor} stopOpacity="0" />
+              <stop offset="50%" stopColor={beamColor} stopOpacity="0.5" />
+              <stop offset="80%" stopColor={beamColor} stopOpacity="0" />
+              <stop offset="100%" stopColor={beamColor} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {/* Base circle (faint) */}
           <circle
-            className="stroke-black/10 stroke-1"
+            className="stroke-black/5 stroke-[4px] sm:stroke-[3px] md:stroke-2"
             cx="50%"
             cy="50%"
             r={radius}
             fill="none"
+          />
+          {/* Beam circle (animated gradient) */}
+          <circle
+            cx="50%"
+            cy="50%"
+            r={radius}
+            fill="none"
+            stroke={`url(#${gradientId})`}
+            className="stroke-[4px] sm:stroke-[3px] md:stroke-2"
           />
         </svg>
       )}

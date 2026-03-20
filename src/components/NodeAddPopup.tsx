@@ -1,7 +1,7 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useAppStore } from '@/store'
 import { RELATION_OPTIONS, type RelationType } from '@/lib/types'
-import { BASE_RELATIONS, resolveRelation } from '@/lib/resolve'
+import { type BaseRelation, resolveRelation, resolveFosterRelation } from '@/lib/resolve'
 
 interface NodeAddPopupProps {
   nodeId: string
@@ -11,8 +11,34 @@ interface NodeAddPopupProps {
   onClose: () => void
 }
 
+/**
+ * Family-chart pattern:
+ *  up   → father / mother / foster_father / foster_mother
+ *  side → husband / wife / foster_brother / foster_sister
+ *  down → son / daughter / foster_son / foster_daughter
+ */
+const DIRECTION_BASES: Record<'up' | 'down' | 'side', { type: BaseRelation | 'foster_father' | 'foster_mother' | 'foster_son' | 'foster_daughter' | 'foster_brother' | 'foster_sister'; labelId: string; gender: 'male' | 'female'; isFoster?: boolean }[]> = {
+  up: [
+    { type: 'father', labelId: 'Bapak', gender: 'male' },
+    { type: 'mother', labelId: 'Ibu', gender: 'female' },
+    { type: 'foster_father', labelId: 'Bapak Susuan', gender: 'male', isFoster: true },
+    { type: 'foster_mother', labelId: 'Ibu Susuan', gender: 'female', isFoster: true },
+  ],
+  side: [
+    { type: 'husband', labelId: 'Suami', gender: 'male' },
+    { type: 'wife', labelId: 'Istri', gender: 'female' },
+    { type: 'foster_brother', labelId: 'Sdr Susuan (lk)', gender: 'male', isFoster: true },
+    { type: 'foster_sister', labelId: 'Sdr Susuan (pr)', gender: 'female', isFoster: true },
+  ],
+  down: [
+    { type: 'son', labelId: 'Anak Lk', gender: 'male' },
+    { type: 'daughter', labelId: 'Anak Pr', gender: 'female' },
+    { type: 'foster_son', labelId: 'Anak Susuan (lk)', gender: 'male', isFoster: true },
+    { type: 'foster_daughter', labelId: 'Anak Susuan (pr)', gender: 'female', isFoster: true },
+  ],
+}
+
 export function NodeAddPopup({ nodeId, direction, x, y, onClose }: NodeAddPopupProps) {
-  const [search, setSearch] = useState('')
   const [customName, setCustomName] = useState('')
   const popupRef = useRef<HTMLDivElement>(null)
   const addRelation = useAppStore(s => s.addRelation)
@@ -34,108 +60,92 @@ export function NodeAddPopup({ nodeId, direction, x, y, onClose }: NodeAddPopupP
     }
   }, [onClose])
 
-  // Get the parent node's relation type to the user
   const parentRelationType = useMemo(() => {
     if (nodeId === 'user') return null
     const node = nodes.find(n => n.id === nodeId)
     return node?.relationType ?? null
   }, [nodeId, nodes])
 
-  const resolvedOptions = useMemo(() => {
-    // Filter base relations by direction
-    let bases = BASE_RELATIONS.filter(b => b.direction === direction)
+  // Resolve base relations for this direction into actual relation types
+  const options = useMemo(() => {
+    const bases = DIRECTION_BASES[direction]
 
-    // Gender filter
-    if (userGender === 'male') {
-      bases = bases.filter(b => b.type !== 'husband')
-    } else {
-      bases = bases.filter(b => b.type !== 'wife')
-    }
-
-    const results: {
-      baseLabel: string
-      baseLabelId: string
-      resolvedType: RelationType
-      resolvedLabel: string
-      resolvedLabelId: string
-      gender: 'male' | 'female'
-    }[] = []
-
-    for (const base of bases) {
-      let resolvedType: RelationType
-
-      if (!parentRelationType) {
-        // From user node — base relation is the direct relation
-        resolvedType = base.type as RelationType
-      } else {
-        const resolved = resolveRelation(parentRelationType, base.type)
-        if (!resolved) continue // skip unresolvable combinations
-        resolvedType = resolved
-      }
-
-      const resolvedOption = RELATION_OPTIONS.find(o => o.type === resolvedType)
-      if (!resolvedOption) continue
-
-      results.push({
-        baseLabel: base.label,
-        baseLabelId: base.labelId,
-        resolvedType,
-        resolvedLabel: resolvedOption.label,
-        resolvedLabelId: resolvedOption.labelId,
-        gender: resolvedOption.gender,
+    return bases
+      .filter(b => {
+        // Filter out inappropriate spouse options based on user gender
+        if (direction === 'side') {
+          if (userGender === 'male' && b.type === 'husband') return false
+          if (userGender === 'female' && b.type === 'wife') return false
+        }
+        return true
       })
-    }
+      .map(b => {
+        let resolvedType: RelationType
+        let resolvedLabelId: string
 
-    // Apply search filter
-    if (search) {
-      const q = search.toLowerCase()
-      return results.filter(r =>
-        r.resolvedLabel.toLowerCase().includes(q) ||
-        r.resolvedLabelId.toLowerCase().includes(q) ||
-        r.baseLabel.toLowerCase().includes(q) ||
-        r.baseLabelId.toLowerCase().includes(q)
-      )
-    }
+        if (b.isFoster) {
+          // Foster relations are universal — resolve based on parent node type
+          resolvedType = resolveFosterRelation(parentRelationType, b.type as 'foster_father' | 'foster_mother' | 'foster_son' | 'foster_daughter' | 'foster_brother' | 'foster_sister')
+          const opt = RELATION_OPTIONS.find(o => o.type === resolvedType)
+          resolvedLabelId = opt?.labelId ?? b.labelId
+        } else if (!parentRelationType) {
+          // From user node — base relation is the direct relation
+          resolvedType = b.type as RelationType
+          resolvedLabelId = b.labelId
+        } else {
+          const resolved = resolveRelation(parentRelationType, b.type as BaseRelation, userGender ?? undefined)
+          // Fall back to base type when no mapping exists
+          resolvedType = resolved ?? b.type as RelationType
+          const opt = RELATION_OPTIONS.find(o => o.type === resolvedType)
+          resolvedLabelId = opt?.labelId ?? b.labelId
+        }
 
-    return results
-  }, [direction, userGender, parentRelationType, search])
+        return {
+          baseType: b.type,
+          baseLabelId: b.labelId,
+          resolvedType,
+          resolvedLabelId,
+          gender: b.gender,
+          isFoster: b.isFoster,
+        }
+      })
+      .filter((o): o is NonNullable<typeof o> => o !== null)
+  }, [direction, userGender, parentRelationType])
 
   const handleAdd = (resolvedType: RelationType) => {
     if (nodeId === 'user') {
       addRelation(resolvedType, customName || undefined)
     } else {
-      // Connect to the clicked parent node with the resolved type
-      // e.g. clicking "daughter" on father → creates sister node connected to father
       addRelationToNode(nodeId, resolvedType, customName || undefined)
     }
     onClose()
   }
 
-  const style: React.CSSProperties = {
-    position: 'fixed',
-    left: Math.min(x, window.innerWidth - 300),
-    top: Math.min(y, window.innerHeight - 400),
-    zIndex: 100,
-  }
+  // Position popup near the button, clamped to viewport
+  const popupW = 240
+  const popupH = 280
+  const left = Math.min(Math.max(x - popupW / 2, 8), window.innerWidth - popupW - 8)
+  const top = Math.min(Math.max(y, 8), window.innerHeight - popupH - 8)
+
+  const dirLabel = direction === 'up' ? 'Orang Tua' : direction === 'down' ? 'Anak' : 'Pasangan'
 
   return (
-    <div ref={popupRef} style={style}
-      className="w-72 max-h-[60vh] bg-white rounded-2xl border-2 border-[var(--color-ink)]
+    <div ref={popupRef}
+      className="fixed z-[100] w-[220px] bg-white rounded-2xl border-2 border-[var(--color-ink)]
         shadow-[4px_4px_0px_var(--color-ink)] flex flex-col overflow-hidden"
+      style={{ left, top }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b-2 border-[var(--color-doodle-border)]">
-        <span className="font-[var(--font-doodle)] text-sm font-bold">
-          Tambah {direction === 'up' ? '↑ Atas' : direction === 'down' ? '↓ Bawah' : '↔ Samping'}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--color-doodle-border)]">
+        <span className="font-[var(--font-doodle)] text-sm font-bold text-[var(--color-ink)]">
+          + {dirLabel}
         </span>
         <button
           onClick={onClose}
-          className="w-6 h-6 rounded-md border border-[var(--color-doodle-border)] flex items-center justify-center
-            cursor-pointer hover:bg-gray-50 transition-colors"
+          className="w-5 h-5 rounded-md border border-[var(--color-doodle-border)] flex items-center justify-center
+            cursor-pointer hover:bg-gray-50 text-[10px] text-[var(--color-ink-light)]"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3 h-3">
-            <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
-          </svg>
+          ✕
         </button>
       </div>
 
@@ -146,60 +156,51 @@ export function NodeAddPopup({ nodeId, direction, x, y, onClose }: NodeAddPopupP
           value={customName}
           onChange={e => setCustomName(e.target.value)}
           placeholder="Nama (opsional)..."
+          autoFocus
           className="w-full px-2 py-1.5 border-2 border-[var(--color-doodle-border)] rounded-lg text-xs
             font-[var(--font-doodle)] focus:outline-none focus:border-[var(--color-ink)] bg-white"
         />
       </div>
 
-      {/* Search */}
-      <div className="px-3 pt-1.5">
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Cari..."
-          autoFocus
-          className="w-full px-2 py-1.5 border-2 border-[var(--color-doodle-border)] rounded-lg text-xs
-            focus:outline-none focus:border-[var(--color-ink)] bg-white"
-        />
-      </div>
-
-      {/* Options */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-1">
-        {resolvedOptions.map(option => (
+      {/* Options — simple 2 buttons */}
+      <div className="p-3 flex flex-col gap-2 max-h-[200px] overflow-y-auto">
+        {options.map(option => (
           <button
             key={option.resolvedType}
             onClick={() => handleAdd(option.resolvedType)}
-            className={`w-full flex items-center gap-2 px-2 py-2 rounded-xl border-2 cursor-pointer
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 cursor-pointer
               transition-all hover:shadow-[2px_2px_0px] active:shadow-none text-left
               ${option.gender === 'male'
-                ? 'border-[var(--color-male)]/30 hover:bg-[var(--color-male-light)] hover:shadow-[var(--color-male)]'
-                : 'border-[var(--color-female)]/30 hover:bg-[var(--color-female-light)] hover:shadow-[var(--color-female)]'
+                ? 'border-[var(--color-male)]/40 hover:bg-[var(--color-male-light)] hover:shadow-[var(--color-male)]'
+                : 'border-[var(--color-female)]/40 hover:bg-[var(--color-female-light)] hover:shadow-[var(--color-female)]'
               }`}
           >
-            <span className={`w-6 h-6 rounded-md flex items-center justify-center text-white text-[10px] font-bold shrink-0
+            <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold shrink-0
               ${option.gender === 'male' ? 'bg-[var(--color-male)]' : 'bg-[var(--color-female)]'}`}>
               {option.gender === 'male' ? '♂' : '♀'}
             </span>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-xs text-[var(--color-ink)] truncate">
-                {option.baseLabelId}
+              <div className="flex items-center gap-1.5">
+                <span className="font-[var(--font-doodle)] font-bold text-sm text-[var(--color-ink)]">
+                  {option.baseLabelId}
+                </span>
+                {option.isFoster && (
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-blue-100 text-blue-700">
+                    SUSUAN
+                  </span>
+                )}
               </div>
-              {parentRelationType ? (
+              {parentRelationType && (
                 <div className="text-[10px] text-[var(--color-ink-light)] truncate">
                   → {option.resolvedLabelId}
-                </div>
-              ) : (
-                <div className="text-[10px] text-[var(--color-ink-light)] truncate">
-                  {option.resolvedLabel}
                 </div>
               )}
             </div>
           </button>
         ))}
-        {resolvedOptions.length === 0 && (
-          <div className="text-center text-[var(--color-ink-light)] text-xs py-3 font-[var(--font-doodle)]">
-            Tidak ada relasi tersedia
+        {options.length === 0 && (
+          <div className="text-center text-[var(--color-ink-light)] text-xs py-2 font-[var(--font-doodle)]">
+            Tidak tersedia
           </div>
         )}
       </div>

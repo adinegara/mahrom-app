@@ -1,7 +1,6 @@
 import { useAppStore } from '@/store'
 import { WelcomeScreen } from '@/components/WelcomeScreen'
-import { Canvas } from '@/components/Canvas'
-import { AddRelationPanel } from '@/components/AddRelationPanel'
+import { FamilyChartCanvas } from '@/components/FamilyChartCanvas'
 import { Toolbar } from '@/components/Toolbar'
 
 function App() {
@@ -13,9 +12,8 @@ function App() {
 
   return (
     <>
-      <Canvas />
+      <FamilyChartCanvas />
       <Toolbar />
-      <AddRelationPanel />
     </>
   )
 }

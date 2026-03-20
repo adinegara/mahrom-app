@@ -2,7 +2,7 @@
 
 @theme inline {
   --font-doodle: "Caveat", cursive;
-  --font-sans: "Inter", sans-serif;
+  --font-sans: "Open Sans", sans-serif;
   --color-canvas: #faf9f6;
   --color-ink: #2d2d2d;
   --color-ink-light: #6b6b6b;
@@ -19,20 +19,17 @@
 
   @keyframes orbit {
     0% {
-      transform: rotate(calc(var(--angle) * 1deg))
-        translateY(calc(var(--radius) * 1px)) rotate(calc(var(--angle) * -1deg));
+      transform: rotate(calc(var(--angle) * 1deg)) translateY(calc(var(--radius) * 1px)) rotate(calc(var(--angle) * -1deg));
     }
+
     100% {
-      transform: rotate(calc(var(--angle) * 1deg + 360deg))
-        translateY(calc(var(--radius) * 1px))
-        rotate(calc((var(--angle) * -1deg) - 360deg));
+      transform: rotate(calc(var(--angle) * 1deg + 360deg)) translateY(calc(var(--radius) * 1px)) rotate(calc((var(--angle) * -1deg) - 360deg));
     }
   }
 }
 
 * {
   margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
 
@@ -81,4 +78,203 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--color-doodle-border);
   border-radius: 3px;
+}
+
+/* ── family-chart overrides (Tailwind v4 preflight conflicts) ── */
+.f3 {
+  --background-color: lightgray !important;
+  --text-color: #2d2d2d;
+  --female-color: #e87fa0;
+  --male-color: #4a90d9;
+}
+
+.f3 div.card-image-circle div.card-label {
+  background-color: transparent !important;
+  color: #000;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  bottom: auto !important;
+  top: 100% !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  margin-top: 4px;
+  max-width: 400% !important;
+  min-width: 180px;
+}
+
+.f3 svg:not(.main_svg) {
+  display: inline-block;
+}
+
+.f3 button {
+  background-color: revert;
+  border-radius: revert;
+  border: revert;
+  padding: revert;
+  font-size: revert;
+  color: revert;
+  cursor: pointer;
+}
+
+.f3 input,
+.f3 select,
+.f3 textarea {
+  background-color: #fff;
+  border: revert;
+  padding: revert;
+  font-size: revert;
+  color: revert;
+  outline: revert;
+}
+
+.f3-form input[type="text"],
+.f3-form textarea {
+  background: #fff !important;
+  color: #2d2d2d !important;
+}
+
+.f3 hr {
+  border: revert;
+}
+
+.f3 img {
+  display: revert;
+}
+
+.f3 label {
+  font-weight: revert;
+}
+
+.f3 path.link {
+  stroke: #888 !important;
+}
+
+.f3 path.link.f3-foster-link {
+  stroke: #2563eb !important;
+  stroke-dasharray: 6, 4;
+}
+
+.f3 #f3Canvas {
+  flex: 1 1 0% !important;
+  min-width: 0;
+}
+
+.f3 .f3-form-cont {
+  order: 1;
+  background: var(--color-canvas, #faf9f6);
+  color: var(--color-ink, #2d2d2d);
+  border-left: 2.5px solid var(--color-ink, #2d2d2d);
+  font-family: var(--font-sans, "Open Sans", sans-serif);
+}
+
+/* Hide the form panel by default until explicitly shown via editing */
+.f3 .f3-form-cont:empty {
+  display: none !important;
+}
+
+/* ── Form panel style ── */
+.f3 .f3-form {
+  padding: 16px 20px;
+  font-family: var(--font-sans, "Open Sans", sans-serif);
+}
+
+.f3 .f3-form input[type="text"],
+.f3 .f3-form textarea,
+.f3 .f3-form select {
+  font-family: var(--font-sans, "Open Sans", sans-serif);
+  font-size: 16px;
+  background: var(--color-doodle-bg, #fff);
+  color: var(--color-ink, #2d2d2d);
+  border: 2px solid var(--color-doodle-border, #d4d4d4);
+  border-radius: 10px;
+  padding: 8px 14px;
+  margin: 6px 0;
+  box-shadow: 2px 2px 0px var(--color-doodle-border, #d4d4d4);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.f3 .f3-form input[type="text"]:focus,
+.f3 .f3-form textarea:focus,
+.f3 .f3-form select:focus {
+  border-color: var(--color-ink, #2d2d2d);
+  box-shadow: 3px 3px 0px var(--color-ink, #2d2d2d);
+  outline: none;
+}
+
+.f3 .f3-form-field label,
+.f3 .f3-info-field-label {
+  font-family: var(--font-sans, "Open Sans", sans-serif);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-ink-light, #6b6b6b);
+  letter-spacing: 0.5px;
+}
+
+.f3 .f3-form hr {
+  border-color: var(--color-doodle-border, #d4d4d4);
+  opacity: 0.4;
+  margin: 12px 0;
+}
+
+.f3 .f3-form .f3-delete-btn {
+  font-family: var(--font-sans, "Open Sans", sans-serif);
+  font-size: 13px;
+  font-weight: 700;
+  background: transparent;
+  border: 2px solid var(--color-mahram-no, #f44336);
+  color: var(--color-mahram-no, #f44336);
+  border-radius: 10px;
+  padding: 8px 14px;
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--color-mahram-no, #f44336) 40%, transparent);
+  transition: all 0.2s;
+}
+
+.f3 .f3-form .f3-delete-btn:hover {
+  background: var(--color-mahram-no, #f44336);
+  color: #fff;
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--color-mahram-no, #f44336) 60%, black);
+}
+
+/* ── Avatar editor in form ── */
+.f3-avatar-editor-container,
+.f3-avatar-editor-container *,
+.avatar-editor,
+.avatar-editor * {
+  font-family: var(--font-sans, "Open Sans", sans-serif) !important;
+}
+
+/* Mobile: form panel as bottom sheet overlay */
+@media (max-width: 640px) {
+  .f3 {
+    position: relative;
+  }
+
+  .f3 .f3-form-cont {
+    position: fixed !important;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 35vh;
+    overflow-y: auto;
+    border-left: none;
+    border-top: 2.5px solid var(--color-ink, #2d2d2d);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    z-index: 50;
+    flex: none !important;
+  }
+
+  .f3 #f3Canvas {
+    height: 100% !important;
+    flex: 1 1 100% !important;
+  }
+}
+
+.f3 .card-new-rel .card-inner,
+.f3 .card-to-add .card-inner {
+  background: transparent !important;
 }

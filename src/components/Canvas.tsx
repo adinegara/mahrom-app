@@ -2,8 +2,10 @@ import { useRef, useCallback, useEffect, useState } from 'react'
 import { useAppStore } from '@/store'
 import { RelationNode } from './RelationNode'
 import { NodeAddPopup } from './NodeAddPopup'
+import { EditPopup } from './EditPopup'
 import { RELATION_OPTIONS } from '@/lib/types'
 import { isSpouseResolution } from '@/lib/resolve'
+import { getAvatarUrl } from '@/lib/avatar'
 
 export function Canvas() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -20,6 +22,7 @@ export function Canvas() {
   const userName = useAppStore(s => s.userName)
   const userGender = useAppStore(s => s.userGender)
   const pinnedPositions = useAppStore(s => s.pinnedPositions)
+  const userAvatarSeed = useAppStore(s => s.userAvatarSeed)
 
   const [_nodeDragId, setNodeDragId] = useState<string | null>(null)
   const nodeDragRef = useRef<{ id: string; startX: number; startY: number; nodeStartX: number; nodeStartY: number } | null>(null)
@@ -31,9 +34,17 @@ export function Canvas() {
   // Popup state for contextual add buttons
   const [addPopup, setAddPopup] = useState<{ nodeId: string; direction: 'up' | 'down' | 'side'; x: number; y: number } | null>(null)
 
+  // Edit popup state
+  const [editPopup, setEditPopup] = useState<{ nodeId: string; x: number; y: number } | null>(null)
+
   const handleNodeAddClick = useCallback((nodeId: string, direction: 'up' | 'down' | 'side', e: React.MouseEvent) => {
     e.stopPropagation()
     setAddPopup({ nodeId, direction, x: e.clientX, y: e.clientY })
+  }, [])
+
+  const handleEditClick = useCallback((nodeId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditPopup({ nodeId, x: e.clientX, y: e.clientY })
   }, [])
 
   // Canvas dragging
@@ -104,11 +115,11 @@ export function Canvas() {
       const touch = e.touches[0]
       const dx = (touch.clientX - nodeDragRef.current.startX) / zoom
       const dy = (touch.clientY - nodeDragRef.current.startY) / zoom
-      
+
       // Tolerate small movements to still count as a tap
       if (Math.abs(touch.clientX - nodeDragRef.current.startX) > 5 || Math.abs(touch.clientY - nodeDragRef.current.startY) > 5) {
         nodeTouchMoveCount.current += 1
-        
+
         // Hide active + buttons as soon as we start actually dragging
         if (nodeTouchMoveCount.current === 1) {
           setActiveNodeId(null)
@@ -126,12 +137,12 @@ export function Canvas() {
   const handleNodeTouchEnd = useCallback((e: React.TouchEvent, nodeId: string) => {
     if (nodeDragRef.current) {
       if (nodeTouchMoveCount.current === 0) {
-        // It's a short tap
+        // It's a short tap — toggle active state (shows buttons)
         setActiveNodeId(prev => prev === nodeId ? null : nodeId)
       }
       nodeDragRef.current = null
       setNodeDragId(null)
-      e.stopPropagation() 
+      e.stopPropagation()
     }
   }, [])
 
@@ -179,10 +190,11 @@ export function Canvas() {
   const centerY = typeof window !== 'undefined' ? window.innerHeight / 2 : 400
 
   // Approximate card half-sizes (used for anchor point offsets)
-  const USER_HALF_W = 65
-  const USER_HALF_H = 55
-  const NODE_HALF_W = 78
-  const NODE_HALF_H = 55
+  // All cards are now uniform: 120px wide box, ~80px tall box + ~40px text below
+  const USER_HALF_W = 60
+  const USER_HALF_H = 40
+  const NODE_HALF_W = 60
+  const NODE_HALF_H = 40
 
   const userX = pinnedPositions['user']?.x || 0
   const userY = pinnedPositions['user']?.y || 0
@@ -391,24 +403,46 @@ export function Canvas() {
           top: centerY + canvasOffset.y + userY * zoom,
           transform: `translate(-50%, -50%) scale(${zoom})`,
           transformOrigin: 'center',
+          width: 120,
         }}
       >
-        <div className={`rounded-2xl border-3 p-4 text-center min-w-[120px]
-          ${userGender === 'male'
-            ? 'bg-[var(--color-male-light)] border-[var(--color-male)] shadow-[4px_4px_0px_var(--color-male)]'
-            : 'bg-[var(--color-female-light)] border-[var(--color-female)] shadow-[4px_4px_0px_var(--color-female)]'
-          }`}
-        >
-          <div
-            className="w-14 h-14 rounded-xl mx-auto mb-2 flex items-center justify-center text-white text-2xl font-bold"
-            style={{ backgroundColor: userGender === 'male' ? 'var(--color-male)' : 'var(--color-female)' }}
+        {/* Edit button on user node */}
+        <div className={`absolute -top-2 -right-2 z-10 transition-opacity
+          ${activeNodeId === 'user' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+          <button
+            onClick={(e) => handleEditClick('user', e)}
+            className="w-6 h-6 rounded-full bg-[var(--color-ink)] text-white text-[10px]
+              flex items-center justify-center cursor-pointer border-2 border-white shadow-sm hover:scale-110"
           >
-            {userGender === 'male' ? '♂' : '♀'}
+            ✎
+          </button>
+        </div>
+
+        <div className="flex flex-col items-center">
+          {/* Avatar box — same size as relation nodes */}
+          <div
+            className="w-[120px] h-[80px] rounded-2xl border-3 flex items-center justify-center overflow-hidden"
+            style={{
+              backgroundColor: userGender === 'male' ? 'var(--color-male-light)' : 'var(--color-female-light)',
+              borderColor: userGender === 'male' ? 'var(--color-male)' : 'var(--color-female)',
+              boxShadow: `4px 4px 0px ${userGender === 'male' ? 'var(--color-male)' : 'var(--color-female)'}`,
+            }}
+          >
+            <img
+              src={getAvatarUrl(userName || 'Saya', userGender ?? undefined, userAvatarSeed || undefined)}
+              alt={userName || 'Saya'}
+              className="w-16 h-16 rounded-xl"
+              draggable={false}
+            />
           </div>
-          <div className="font-[var(--font-doodle)] text-lg font-bold text-[var(--color-ink)]">
+
+          {/* Name */}
+          <div className="mt-2 max-w-[160px] font-[var(--font-doodle)] text-sm font-bold text-[var(--color-ink)] text-center leading-tight break-words">
             {userName || 'Saya'}
           </div>
-          <div className="text-xs text-[var(--color-ink-light)] mt-0.5">
+
+          {/* Label */}
+          <div className="mt-1 max-w-[160px] px-2 py-0.5 rounded-lg text-[10px] text-[var(--color-ink-light)] text-center bg-gray-100 break-words leading-tight">
             {userGender === 'male' ? 'Laki-laki' : 'Perempuan'}
           </div>
         </div>
@@ -419,7 +453,7 @@ export function Canvas() {
           className={`absolute -top-3 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full
             bg-[var(--color-ink)] text-white text-sm flex items-center justify-center
             transition-opacity cursor-pointer
-            z-10 border-2 border-white shadow-sm hover:scale-110 
+            z-10 border-2 border-white shadow-sm hover:scale-110
             ${activeNodeId === 'user' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
         >
           +
@@ -466,10 +500,11 @@ export function Canvas() {
             onTouchMove={handleNodeTouchMove}
             onTouchEnd={(e) => handleNodeTouchEnd(e, node.id)}
           >
-            <RelationNode 
-              node={node} 
-              mahramResult={edge.mahramResult} 
+            <RelationNode
+              node={node}
+              mahramResult={edge.mahramResult}
               onAddClick={handleNodeAddClick}
+              onEditClick={handleEditClick}
               isActive={activeNodeId === node.id}
             />
           </div>
@@ -493,6 +528,16 @@ export function Canvas() {
           x={addPopup.x}
           y={addPopup.y}
           onClose={() => setAddPopup(null)}
+        />
+      )}
+
+      {/* Edit popup */}
+      {editPopup && (
+        <EditPopup
+          nodeId={editPopup.nodeId}
+          x={editPopup.x}
+          y={editPopup.y}
+          onClose={() => setEditPopup(null)}
         />
       )}
     </div>

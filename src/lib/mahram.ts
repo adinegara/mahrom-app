@@ -43,11 +43,13 @@ export function checkMahram(userGender: Gender, relationType: RelationType): Mah
     'foster_mother', 'foster_daughter', 'foster_sister',
     'foster_paternal_aunt', 'foster_maternal_aunt',
     'foster_niece_from_brother', 'foster_niece_from_sister',
+    'foster_paternal_grandmother', 'foster_maternal_grandmother',
   ]
   const mahramSusuanFemale: RelationType[] = [
     'foster_father', 'foster_son', 'foster_brother',
     'foster_paternal_uncle', 'foster_maternal_uncle',
     'foster_nephew_from_brother', 'foster_nephew_from_sister',
+    'foster_paternal_grandfather', 'foster_maternal_grandfather',
   ]
 
   if (userGender === 'male' && mahramSusuanMale.includes(relationType)) {
@@ -70,12 +72,13 @@ export function checkMahram(userGender: Gender, relationType: RelationType): Mah
   // ====== MAHRAM PERNIKAHAN (by marriage - permanent) ======
   // For males: mother-in-law (nikah saja), step_daughter (harus jima'), step_mother (nikah saja), daughter_in_law (nikah saja)
   if (userGender === 'male') {
-    if (relationType === 'mother_in_law' || relationType === 'wife_foster_mother') {
+    if (relationType === 'mother_in_law' || relationType === 'wife_foster_mother'
+      || relationType === 'wife_paternal_grandmother' || relationType === 'wife_maternal_grandmother') {
       return {
         isMahram: true,
         category: 'mahram_pernikahan',
         label: 'Mahram Pernikahan',
-        reason: 'Ibu mertua (atau ibu susuan istri) - mahram selamanya, cukup dengan akad nikah',
+        reason: getMahramPernikahanReason(relationType),
       }
     }
     if (relationType === 'step_daughter' || relationType === 'wife_foster_daughter') {
@@ -107,12 +110,13 @@ export function checkMahram(userGender: Gender, relationType: RelationType): Mah
 
   // For females: father-in-law (nikah saja), step_son (nikah saja), step_father (harus jima'), son_in_law (nikah saja)
   if (userGender === 'female') {
-    if (relationType === 'father_in_law' || relationType === 'husband_foster_father') {
+    if (relationType === 'father_in_law' || relationType === 'husband_foster_father'
+      || relationType === 'husband_paternal_grandfather' || relationType === 'husband_maternal_grandfather') {
       return {
         isMahram: true,
         category: 'mahram_pernikahan',
         label: 'Mahram Pernikahan',
-        reason: 'Bapak mertua (atau bapak susuan suami) - mahram selamanya, cukup dengan akad nikah',
+        reason: getMahramPernikahanReason(relationType),
       }
     }
     if (relationType === 'step_son' || relationType === 'husband_foster_son') {
@@ -256,22 +260,40 @@ function getMahramNasabReason(type: RelationType): string {
 
 function getMahramSusuanReason(type: RelationType): string {
   const reasons: Partial<Record<RelationType, string>> = {
-    foster_mother: 'Ibu susuan - mahram sesusuan selamanya',
-    foster_father: 'Bapak susuan - mahram sesusuan selamanya',
-    foster_daughter: 'Anak perempuan susuan - mahram sesusuan selamanya',
-    foster_son: 'Anak laki-laki susuan - mahram sesusuan selamanya',
-    foster_sister: 'Saudara perempuan susuan - mahram sesusuan selamanya',
-    foster_brother: 'Saudara laki-laki susuan - mahram sesusuan selamanya',
-    foster_paternal_aunt: 'Bibi susuan dari bapak - mahram sesusuan selamanya',
-    foster_paternal_uncle: 'Paman susuan dari bapak - mahram sesusuan selamanya',
-    foster_maternal_aunt: 'Bibi susuan dari ibu - mahram sesusuan selamanya',
-    foster_maternal_uncle: 'Paman susuan dari ibu - mahram sesusuan selamanya',
-    foster_niece_from_brother: 'Keponakan perempuan susuan dari saudara laki-laki - mahram sesusuan selamanya',
-    foster_nephew_from_brother: 'Keponakan laki-laki susuan dari saudara laki-laki - mahram sesusuan selamanya',
-    foster_niece_from_sister: 'Keponakan perempuan susuan dari saudara perempuan - mahram sesusuan selamanya',
-    foster_nephew_from_sister: 'Keponakan laki-laki susuan dari saudara perempuan - mahram sesusuan selamanya',
+    foster_mother: 'Ibu susuan - mahram susuan selamanya',
+    foster_father: 'Bapak susuan - mahram susuan selamanya',
+    foster_daughter: 'Anak perempuan susuan - mahram susuan selamanya',
+    foster_son: 'Anak laki-laki susuan - mahram susuan selamanya',
+    foster_sister: 'Saudara perempuan susuan - mahram susuan selamanya',
+    foster_brother: 'Saudara laki-laki susuan - mahram susuan selamanya',
+    foster_paternal_aunt: 'Bibi susuan dari bapak - mahram susuan selamanya',
+    foster_paternal_uncle: 'Paman susuan dari bapak - mahram susuan selamanya',
+    foster_maternal_aunt: 'Bibi susuan dari ibu - mahram susuan selamanya',
+    foster_maternal_uncle: 'Paman susuan dari ibu - mahram susuan selamanya',
+    foster_niece_from_brother: 'Keponakan perempuan susuan dari saudara laki-laki - mahram susuan selamanya',
+    foster_nephew_from_brother: 'Keponakan laki-laki susuan dari saudara laki-laki - mahram susuan selamanya',
+    foster_niece_from_sister: 'Keponakan perempuan susuan dari saudara perempuan - mahram susuan selamanya',
+    foster_nephew_from_sister: 'Keponakan laki-laki susuan dari saudara perempuan - mahram susuan selamanya',
+    foster_paternal_grandmother: 'Nenek susuan dari bapak - mahram susuan selamanya',
+    foster_maternal_grandmother: 'Nenek susuan dari ibu - mahram susuan selamanya',
+    foster_paternal_grandfather: 'Kakek susuan dari bapak - mahram susuan selamanya',
+    foster_maternal_grandfather: 'Kakek susuan dari ibu - mahram susuan selamanya',
   }
-  return reasons[type] || 'Mahram karena hubungan sesusuan'
+  return reasons[type] || 'Mahram karena hubungan susuan'
+}
+
+function getMahramPernikahanReason(type: RelationType): string {
+  const reasons: Partial<Record<RelationType, string>> = {
+    mother_in_law: 'Ibu mertua - mahram selamanya, cukup dengan akad nikah',
+    wife_foster_mother: 'Ibu susuan istri - mahram selamanya, cukup dengan akad nikah',
+    wife_paternal_grandmother: 'Nenek istri (dari bapak) - mahram selamanya, cukup dengan akad nikah',
+    wife_maternal_grandmother: 'Nenek istri (dari ibu) - mahram selamanya, cukup dengan akad nikah',
+    father_in_law: 'Bapak mertua - mahram selamanya, cukup dengan akad nikah',
+    husband_foster_father: 'Bapak susuan suami - mahram selamanya, cukup dengan akad nikah',
+    husband_paternal_grandfather: 'Kakek suami (dari bapak) - mahram selamanya, cukup dengan akad nikah',
+    husband_maternal_grandfather: 'Kakek suami (dari ibu) - mahram selamanya, cukup dengan akad nikah',
+  }
+  return reasons[type] || 'Mahram karena hubungan pernikahan'
 }
 
 function getMahramSementaraReason(type: RelationType): string {

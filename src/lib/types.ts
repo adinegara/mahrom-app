@@ -89,13 +89,23 @@ export type RelationType =
   | 'foster_niece_from_sister_husband'
   // ---> END FOSTER MARRIAGE RELATIONS <---
   | 'wife_sister'
+  | 'wife_brother'
   | 'wife_paternal_aunt'
   | 'wife_maternal_aunt'
+  | 'wife_paternal_grandfather'
+  | 'wife_paternal_grandmother'
+  | 'wife_maternal_grandfather'
+  | 'wife_maternal_grandmother'
   | 'wife_niece_from_brother'
   | 'wife_niece_from_sister'
   | 'husband_brother'
+  | 'husband_sister'
   | 'husband_paternal_uncle'
   | 'husband_maternal_uncle'
+  | 'husband_paternal_grandfather'
+  | 'husband_paternal_grandmother'
+  | 'husband_maternal_grandfather'
+  | 'husband_maternal_grandmother'
   | 'husband_nephew_from_brother'
   | 'husband_nephew_from_sister'
   | 'brother_wife'
@@ -106,6 +116,10 @@ export type RelationType =
   | 'sister_husband'
   | 'paternal_aunt_husband'
   | 'maternal_aunt_husband'
+
+export function isFosterRelation(type: RelationType): boolean {
+  return type.includes('foster')
+}
 
 export type MahramCategory =
   | 'mahram_nasab'
@@ -127,6 +141,8 @@ export interface PersonNode {
   name: string
   gender: Gender
   relationType: RelationType
+  relationLabel?: string // Descriptive label computed from tree path (overrides RELATION_OPTIONS labelId)
+  avatarSeed?: string // Custom seed for DiceBear avatar; defaults to name-relationType
   x: number
   y: number
   layer: number
@@ -138,6 +154,7 @@ export interface RelationEdge {
   toId: string
   relationType: RelationType
   mahramResult: MahramResult
+  edgeKind?: 'parent' | 'child' | 'spouse'
 }
 
 export interface RelationOption {
@@ -185,11 +202,21 @@ export const RELATION_OPTIONS: RelationOption[] = [
   { type: 'foster_maternal_uncle', label: 'Foster Maternal Uncle', labelId: 'Paman Susuan (dari ibu)', gender: 'male', direction: 'side', parentRelation: 'foster_maternal_grandfather', layer: -1 },
   { type: 'foster_maternal_aunt', label: 'Foster Maternal Aunt', labelId: 'Bibi Susuan (dari ibu)', gender: 'female', direction: 'side', parentRelation: 'foster_maternal_grandfather', layer: -1 },
   { type: 'wife_sister', label: "Wife's Sister", labelId: 'Saudara Perempuan Istri', gender: 'female', direction: 'side', parentRelation: 'father_in_law', layer: 0 },
+  { type: 'wife_brother', label: "Wife's Brother", labelId: 'Saudara Laki-laki Istri', gender: 'male', direction: 'side', parentRelation: 'father_in_law', layer: 0 },
+  { type: 'husband_sister', label: "Husband's Sister", labelId: 'Saudara Perempuan Suami', gender: 'female', direction: 'side', parentRelation: 'father_in_law', layer: 0 },
   { type: 'wife_paternal_aunt', label: "Wife's Paternal Aunt", labelId: 'Bibi Istri (dari bapak)', gender: 'female', direction: 'side', parentRelation: 'wife', layer: -1 },
   { type: 'wife_maternal_aunt', label: "Wife's Maternal Aunt", labelId: 'Bibi Istri (dari ibu)', gender: 'female', direction: 'side', parentRelation: 'wife', layer: -1 },
   { type: 'husband_brother', label: "Husband's Brother", labelId: 'Saudara Laki-laki Suami', gender: 'male', direction: 'side', parentRelation: 'father_in_law', layer: 0 },
   { type: 'husband_paternal_uncle', label: "Husband's Paternal Uncle", labelId: 'Paman Suami (dari bapak)', gender: 'male', direction: 'side', parentRelation: 'husband', layer: -1 },
   { type: 'husband_maternal_uncle', label: "Husband's Maternal Uncle", labelId: 'Paman Suami (dari ibu)', gender: 'male', direction: 'side', parentRelation: 'husband', layer: -1 },
+  { type: 'wife_paternal_grandfather', label: "Wife's Paternal Grandfather", labelId: 'Kakek Istri (dari bapak)', gender: 'male', direction: 'up', parentRelation: 'father_in_law', layer: -2 },
+  { type: 'wife_paternal_grandmother', label: "Wife's Paternal Grandmother", labelId: 'Nenek Istri (dari bapak)', gender: 'female', direction: 'up', parentRelation: 'wife_paternal_grandfather', layer: -2 },
+  { type: 'wife_maternal_grandfather', label: "Wife's Maternal Grandfather", labelId: 'Kakek Istri (dari ibu)', gender: 'male', direction: 'up', parentRelation: 'mother_in_law', layer: -2 },
+  { type: 'wife_maternal_grandmother', label: "Wife's Maternal Grandmother", labelId: 'Nenek Istri (dari ibu)', gender: 'female', direction: 'up', parentRelation: 'wife_maternal_grandfather', layer: -2 },
+  { type: 'husband_paternal_grandfather', label: "Husband's Paternal Grandfather", labelId: 'Kakek Suami (dari bapak)', gender: 'male', direction: 'up', parentRelation: 'father_in_law', layer: -2 },
+  { type: 'husband_paternal_grandmother', label: "Husband's Paternal Grandmother", labelId: 'Nenek Suami (dari bapak)', gender: 'female', direction: 'up', parentRelation: 'husband_paternal_grandfather', layer: -2 },
+  { type: 'husband_maternal_grandfather', label: "Husband's Maternal Grandfather", labelId: 'Kakek Suami (dari ibu)', gender: 'male', direction: 'up', parentRelation: 'mother_in_law', layer: -2 },
+  { type: 'husband_maternal_grandmother', label: "Husband's Maternal Grandmother", labelId: 'Nenek Suami (dari ibu)', gender: 'female', direction: 'up', parentRelation: 'husband_maternal_grandfather', layer: -2 },
   { type: 'brother_wife', label: "Brother's Wife", labelId: 'Istri Saudara Laki-laki', gender: 'female', direction: 'side', parentRelation: 'brother', layer: 0 },
   { type: 'sister_husband', label: "Sister's Husband", labelId: 'Suami Saudara Perempuan', gender: 'male', direction: 'side', parentRelation: 'sister', layer: 0 },
   { type: 'paternal_uncle_wife', label: "Paternal Uncle's Wife", labelId: 'Istri Paman (dari bapak)', gender: 'female', direction: 'side', parentRelation: 'paternal_uncle', layer: -1 },
