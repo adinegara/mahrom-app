@@ -68,10 +68,10 @@ export function WelcomeScreen() {
           </p>
         </div>
 
-        {/* Notionists illustration */}
+        {/* Logo */}
         <div className="w-32 h-32 relative">
           <img
-            src="https://api.dicebear.com/9.x/notionists/svg?seed=mahrom&backgroundColor=transparent"
+            src="/notionists-logo.png"
             alt="Mahrom"
             className="w-full h-full"
           />
