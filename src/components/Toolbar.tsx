@@ -69,6 +69,7 @@ export function Toolbar() {
           {/* Logo */}
           <div className="px-2 py-3">
             <div className="flex items-center gap-2">
+              <img src="/notionists-logo.png" alt="Mahrom Logo" className="w-8 h-8" />
               <h1 className="font-[var(--font-doodle)] text-2xl font-bold text-[var(--color-ink)] leading-tight">Mahrom</h1>
               <span className="text-[9px] font-semibold uppercase tracking-wider bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-md leading-none">beta</span>
             </div>
