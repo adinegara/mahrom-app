@@ -71,7 +71,7 @@ export function WelcomeScreen() {
         {/* Logo */}
         <div className="w-32 h-32 relative">
           <img
-            src="/notionists-logo.png"
+            src="/notionists-logo-trans.png"
             alt="Mahrom"
             className="w-full h-full"
           />
